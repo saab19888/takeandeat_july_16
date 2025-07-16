@@ -1,0 +1,43 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default rule - deny all access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+    
+    // Allow public write access to contact messages
+    match /contact_messages/{messageId} {
+      allow write: if 
+        // Validate required fields
+        request.resource.data.keys().hasAll(['name', 'email', 'subject', 'message', 'createdAt', 'status']) &&
+        // Validate field types
+        request.resource.data.name is string &&
+        request.resource.data.email is string &&
+        request.resource.data.subject is string &&
+        request.resource.data.message is string &&
+        request.resource.data.createdAt is string &&
+        request.resource.data.status == 'new' &&
+        // Validate field lengths
+        request.resource.data.name.size() <= 100 &&
+        request.resource.data.email.size() <= 100 &&
+        request.resource.data.subject.size() <= 200 &&
+        request.resource.data.message.size() <= 2000;
+    }
+
+    // Allow public write access to newsletter subscriptions
+    match /newsletter_subscribers/{subscriberId} {
+      allow write: if 
+        // Validate required fields
+        request.resource.data.keys().hasAll(['email', 'subscribedAt', 'status']) &&
+        // Validate field types
+        request.resource.data.email is string &&
+        request.resource.data.subscribedAt is string &&
+        request.resource.data.status == 'active' &&
+        // Validate email format
+        request.resource.data.email.matches('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$') &&
+        // Validate field length
+        request.resource.data.email.size() <= 100;
+    }
+  }
+}
